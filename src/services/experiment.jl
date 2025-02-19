@@ -1,4 +1,45 @@
 """
+    startexperiment(instance::MLFlow, name::String;
+        artifact_location::Union{String, Missing}=missing,
+        tags::MLFlowUpsertData{Tag}=Tag[])
+
+Create an [`Experiment`](@ref) with a name or retrieve the experiment id of the experiment with the same name. Returns the [`Experiment`](@ref).
+
+# Arguments
+- `instance`: [`MLFlow`](@ref) configuration.
+- `name`: [`Experiment`](@ref) name. This field is required.
+- `artifact_location`: Location where all artifacts for the [`Experiment`](@ref)
+    are stored. If not provided, the remote server will select an appropriate
+    default.
+- `tags`: A collection of [`Tag`](@ref) to set on the [`Experiment`](@ref).
+
+# Returns
+The ID of the newly created [`Experiment`](@ref).
+"""
+function startexperiment(
+  instance::MLFlow, name::String;
+  artifact_location::Union{String,Missing}=missing,
+  tags::MLFlowUpsertData{Tag}=Tag[]
+)::String
+  try
+    id = createexperiment(
+      instance, name;
+      artifact_location, tags,
+      outputlevel=0,
+    )
+    println("creating experiment with name $(name)")
+    return id
+  catch
+    id = getexperimentbyname(
+      instance, name;
+      outputlevel=0,
+    ).experiment_id
+    println("retrieving experiment called $(name)")
+    return id
+  end
+
+end
+"""
     createexperiment(instance::MLFlow, name::String;
         artifact_location::Union{String, Missing}=missing,
         tags::MLFlowUpsertData{Tag}=Tag[])
@@ -20,9 +61,10 @@ The ID of the newly created [`Experiment`](@ref).
 """
 function createexperiment(instance::MLFlow, name::String;
     artifact_location::Union{String,Missing}=missing,
-    tags::MLFlowUpsertData{Tag}=Tag[])::String
+    tags::MLFlowUpsertData{Tag}=Tag[],
+    outputlevel=1)::String
     result = mlfpost(instance, "experiments/create"; name=name,
-        artifact_location=artifact_location, tags=parse(Tag, tags))
+        artifact_location=artifact_location, tags=parse(Tag, tags), outputlevel=outputlevel)
     return result["experiment_id"]
 end
 
@@ -62,7 +104,7 @@ experiments share the same name, the API will return one of them.
 # Returns
 An instance of type [`Experiment`](@ref).
 """
-function getexperimentbyname(instance::MLFlow, experiment_name::String)::Experiment
+function getexperimentbyname(instance::MLFlow, experiment_name::String; outputlevel=1)::Experiment
     result = mlfget(instance, "experiments/get-by-name"; experiment_name=experiment_name)
     return result["experiment"] |> Experiment
 end

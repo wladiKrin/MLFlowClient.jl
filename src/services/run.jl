@@ -1,4 +1,37 @@
 """
+    startrun(instance::MLFlow, experiment_id::String;
+        run_name::Union{String, Missing}=missing,
+        start_time::Union{Int64, Missing}=missing,
+        tags::Union{Dict{<:Any}, Array{<:Any}}=[])
+
+Create a new [`Run`](@ref) within an [`Experiment`](@ref). With that, you can use the following syntax to start a run:
+
+startrun(...) do run
+  ...
+end
+
+This will automatically mark the run as finished in case something goes wrong.
+
+# Arguments
+- `instance`: [`MLFlow`](@ref) configuration.
+- `experiment_id`: ID of the associated [`Experiment`](@ref).
+- `run_name`: Name of the [`Run`](@ref).
+- `start_time`: Unix timestamp in milliseconds of when the [`Run`](@ref) started.
+- `tags`: Additional metadata for [`Run`](@ref).
+
+# Returns
+An instance of type [`Run`](@ref).
+"""
+function startrun(f::Function, args...; kwargs...)
+  exprun = createrun(args...; kwargs...)
+  try
+    f(exprun)
+  finally
+    updaterun(first(args), exprun; kwargs..., status = RunStatus("FINISHED"))
+  end
+end
+
+"""
     createrun(instance::MLFlow, experiment_id::String;
         run_name::Union{String, Missing}=missing,
         start_time::Union{Int64, Missing}=missing,

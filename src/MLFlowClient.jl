@@ -18,6 +18,7 @@ using Base64
 using URIs
 using JSON
 using ShowCases
+using DataFrames
 
 include("types/mlflow.jl")
 export MLFlow
@@ -54,13 +55,13 @@ include("api.jl")
 include("utils.jl")
 
 include("services/experiment.jl")
-export getexperiment, createexperiment, deleteexperiment, setexperimenttag,
+export startexperiment, getexperiment, createexperiment, deleteexperiment, setexperimenttag,
     updateexperiment, restoreexperiment, searchexperiments, getexperimentbyname,
     createexperimentpermission, getexperimentpermission, updateexperimentpermission,
     deleteexperimentpermission
 
 include("services/run.jl")
-export getrun, createrun, deleterun, setruntag, updaterun, restorerun, searchruns,
+export startrun, getrun, createrun, deleterun, setruntag, updaterun, restorerun, searchruns,
     deleteruntag
 
 include("services/logger.jl")

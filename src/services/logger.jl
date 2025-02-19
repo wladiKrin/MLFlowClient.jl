@@ -21,23 +21,57 @@ represent ML model accuracy. A [`Metric`](@ref) can be logged multiple times.
 # Returns
 `true` if successful. Otherwise, raises exception.
 """
-function logmetric(instance::MLFlow, run_id::String, key::String, value::Float64;
+function logmetric(instance::MLFlow, run_id::String, key::String, value;
     timestamp::Int64=round(Int, now() |> datetime2unix),
-    step::Union{Int64,Missing}=missing)::Bool
+    step::Union{Int64,Missing}=missing, 
+    outputlevel::Int=0
+)
+    outputlevel>0 && println("logging metric $(key): $(value)")
     mlfpost(instance, "runs/log-metric"; run_id=run_id, key=key, value=value,
         timestamp=timestamp, step=step)
     return true
 end
-logmetric(instance::MLFlow, run::Run, key::String, value::Float64;
+logmetric(instance::MLFlow, run::Run, key::String, value;
     timestamp::Int64=round(Int, now() |> datetime2unix),
-    step::Union{Int64,Missing}=missing)::Bool =
-    logmetric(instance, run.info.run_id, key, value; timestamp=timestamp, step=step)
-logmetric(instance::MLFlow, run_id::String, metric::Metric)::Bool =
-    logmetric(instance, run_id, metric.key, metric.value, timestamp=metric.timestamp,
-        step=metric.step)
-logmetric(instance::MLFlow, run::Run, metric::Metric)::Bool =
-    logmetric(instance, run.info.run_id, metric.key, metric.value,
-        timestamp=metric.timestamp, step=metric.step)
+    step::Union{Int64,Missing}=missing, outputlevel::Int=0 )::Bool =
+    logmetric(instance, run.info.run_id, key, value; timestamp=timestamp, step=step, outputlevel)
+logmetric(instance::MLFlow, run_id::String, metric::Metric; outputlevel::Int=0)::Bool =
+    logmetric(instance, run_id, metric.key, metric.value; 
+        timestamp=metric.timestamp, step=metric.step, outputlevel)
+logmetric(instance::MLFlow, run::Run, metric::Metric; outputlevel::Int=0)::Bool =
+    logmetric(instance, run.info.run_id, metric.key, metric.value;
+        timestamp=metric.timestamp, step=metric.step, outputlevel)
+
+
+"""
+    convenience wrapper for logging data provided in a Dataframe
+"""
+function logmetric(instance::MLFlow, run_id::String, df::DataFrame;
+    timestamp::Int64=round(Int, now() |> datetime2unix),
+    step::Union{Int64,Missing}=missing,
+    outputlevel::Int=0,
+)
+  for (k, v) in pairs(eachcol(df))
+    try
+      (key, value) = (string(k), only(v))
+      if prod(size(value)) == 1
+        logmetric(instance, run_id, key, value; timestamp, step, outputlevel)
+      else
+        println("$(key) is not a number; can't be logged currently")
+      end
+        
+    catch
+      println("Can't save metric $(string(k)) of type $(typeof(v))")
+    end
+  end
+  return true
+end
+
+logmetric(instance::MLFlow, run::Run, df::DataFrame;
+    timestamp::Int64=round(Int, now() |> datetime2unix),
+    step::Union{Int64,Missing}=missing,
+    outputlevel::Int=0) = 
+  logmetric(instance, run.info.run_id, df; timestamp, step, outputlevel)
 
 """
     logbatch(instance::MLFlow, run_id::String; metrics::MLFlowUpsertData{Metric},
@@ -123,3 +157,13 @@ logparam(instance::MLFlow, run_id::String, param::Param)::Bool =
     logparam(instance, run_id, param.key, param.value)
 logparam(instance::MLFlow, run::Run, param::Param)::Bool =
     logparam(instance, run.info.run_id, param.key, param.value)
+
+function logparam(instance::MLFlow, run_id::String, dict::Dict) #key::String, value::String)::Bool
+  for (key, value) in dict
+    logparam(instance, run_id, key, string(value))
+  end
+  return true
+end
+
+logparam(instance::MLFlow, run::Run, dict::Dict) =
+    logparam(instance, run.info.run_id, dict)

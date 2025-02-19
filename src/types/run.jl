@@ -101,8 +101,10 @@ Run inputs.
 struct RunInputs
     dataset_inputs::Array{DatasetInput}
 end
-RunInputs(data::Dict{String,Any}) = RunInputs(
-    [DatasetInput(dataset_input) for dataset_input in get(data, "dataset_inputs", [])])
+
+RunInputs(data::Dict{String,Any}) = RunInputs([DatasetInput(dataset_input) for dataset_input in get(data, "dataset_inputs", [])])
+RunInputs() = RunInputs(Array{DatasetInput}([]))
+
 Base.show(io::IO, t::RunInputs) = show(io, ShowCase(t, new_lines=true))
 
 """
@@ -120,6 +122,11 @@ struct Run
     data::RunData
     inputs::RunInputs
 end
-Run(data::Dict{String,Any}) = Run(RunInfo(data["info"]), RunData(data["data"]),
-    RunInputs(data["inputs"]))
+# Run(data::Dict{String,Any}) = Run(RunInfo(data["info"]), RunData(data["data"]),
+#     RunInputs(data["inputs"]))
+function Run(data::Dict{String,Any})
+  !haskey(data, "inputs") && return Run(RunInfo(data["info"]), RunData(data["data"]), RunInputs())
+  return Run(RunInfo(data["info"]), RunData(data["data"]), RunInputs(data["inputs"]))
+end
+
 Base.show(io::IO, t::Run) = show(io, ShowCase(t, new_lines=true))
